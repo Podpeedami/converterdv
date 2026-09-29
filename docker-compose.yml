@@ -1,5 +1,4 @@
 services:
-
   redis:
     image: redis:7-alpine
     container_name: video-redis
@@ -16,12 +15,12 @@ services:
       --host 0.0.0.0
       --port 8000
     ports:
-      - "8000:8000"
+      - "${PORT}:8000"
     environment:
       REDIS_URL: redis://redis:6379/0
-      MAX_UPLOAD_SIZE: "2147483648"
+      MAX_UPLOAD_SIZE: "${MAX_UPLOAD_SIZE}"
     volumes:
-      - ./data:/data
+      - "${DATA_PATH}:/data"
     depends_on:
       - redis
     restart: unless-stopped
@@ -38,7 +37,7 @@ services:
     environment:
       REDIS_URL: redis://redis:6379/0
     volumes:
-      - ./data:/data
+      - "${DATA_PATH}:/data"
     depends_on:
       - redis
     restart: unless-stopped

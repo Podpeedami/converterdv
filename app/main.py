@@ -50,10 +50,28 @@ redis_client = Redis.from_url(
     decode_responses=True,
 )
 
-MAX_UPLOAD_SIZE = int(
+def parse_size(value: str) -> int:
+    value = value.strip().upper()
+
+    units = {
+        "B": 1,
+        "K": 1024,
+        "M": 1024 ** 2,
+        "G": 1024 ** 3,
+        "T": 1024 ** 4,
+    }
+
+    for suffix, multiplier in units.items():
+        if value.endswith(suffix):
+            number = float(value[:-1])
+            return int(number * multiplier)
+
+    return int(value)
+
+MAX_UPLOAD_SIZE = parse_size(
     os.getenv(
         "MAX_UPLOAD_SIZE",
-        str(2 * 1024 * 1024 * 1024),
+        "2G",
     )
 )
 
