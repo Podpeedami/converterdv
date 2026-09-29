@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Video Converter</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background:
+                radial-gradient(circle at top,
+                    #26324a,
+                    #10131a 55%);
+
+            color: white;
+
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            width: min(650px, 94%);
+        }
+
+        .card {
+            padding: 32px;
+
+            border-radius: 20px;
+
+            background: #191d27;
+
+            box-shadow:
+                0 25px 80px rgba(0, 0, 0, 0.45);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 30px;
+        }
+
+        .subtitle {
+            margin-bottom: 28px;
+            color: #9ca3af;
+        }
+
+        .drop-zone {
+            padding: 40px 20px;
+
+            border: 2px dashed #4b5563;
+            border-radius: 14px;
+
+            text-align: center;
+            cursor: pointer;
+
+            transition: 0.2s;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: #6366f1;
+
+            background:
+                rgba(99, 102, 241, 0.08);
+        }
+
+        .drop-zone strong {
+            display: block;
+
+            margin-bottom: 8px;
+            font-size: 18px;
+        }
+
+        .filename {
+            margin-top: 15px;
+
+            color: #a5b4fc;
+
+            word-break: break-all;
+        }
+
+        .options {
+            display: grid;
+
+            grid-template-columns: 1fr 1fr;
+
+            gap: 15px;
+
+            margin-top: 20px;
+        }
+
+        label {
+            display: block;
+
+            margin-bottom: 7px;
+
+            color: #9ca3af;
+
+            font-size: 14px;
+        }
+
+        select {
+            width: 100%;
+
+            padding: 12px;
+
+            border: 1px solid #374151;
+
+            border-radius: 10px;
+
+            background: #111827;
+
+            color: white;
+
+            font-size: 15px;
+        }
+
+        button {
+            width: 100%;
+
+            margin-top: 22px;
+
+            padding: 14px;
+
+            border: 0;
+
+            border-radius: 10px;
+
+            background: #6366f1;
+
+            color: white;
+
+            font-size: 16px;
+
+            font-weight: 600;
+
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #4f46e5;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 25px;
+        }
+
+        .progress-bar {
+            height: 12px;
+
+            overflow: hidden;
+
+            border-radius: 20px;
+
+            background: #111827;
+        }
+
+        .progress {
+            width: 0%;
+            height: 100%;
+
+            background:
+                linear-gradient(90deg,
+                    #6366f1,
+                    #8b5cf6);
+
+            transition: width 0.3s;
+        }
+
+        .status {
+            margin-top: 10px;
+
+            color: #9ca3af;
+
+            text-align: center;
+        }
+
+        .result {
+            display: none;
+
+            margin-top: 25px;
+            padding: 18px;
+
+            border-radius: 12px;
+
+            background:
+                rgba(34, 197, 94, 0.1);
+
+            text-align: center;
+        }
+
+        .download {
+            display: inline-block;
+
+            margin-top: 12px;
+            padding: 11px 20px;
+
+            border-radius: 9px;
+
+            background: #22c55e;
+
+            color: white;
+
+            text-decoration: none;
+
+            font-weight: 600;
+        }
+
+        .error {
+            display: none;
+
+            margin-top: 20px;
+            padding: 15px;
+
+            border-radius: 10px;
+
+            background:
+                rgba(239, 68, 68, 0.12);
+
+            color: #fca5a5;
+        }
+
+        @media (max-width: 500px) {
+
+            .card {
+                padding: 22px;
+            }
+
+            .options {
+                grid-template-columns: 1fr;
+            }
+
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+
+            <h1>
+                🎬 Video Converter
+            </h1>
+
+            <div class="subtitle">
+                Перекодировка видео через FFmpeg
+            </div>
+
+            <div class="drop-zone" id="dropZone">
+
+                <strong>
+                    Перетащите видео сюда
+                </strong>
+
+                <span>
+                    или нажмите для выбора файла
+                </span>
+
+                <div class="filename" id="filename"></div>
+
+                <input type="file" id="fileInput" accept="video/*" hidden>
+
+            </div>
+
+            <div class="options">
+
+                <div>
+
+                    <label for="preset">
+                        Разрешение / кодек
+                    </label>
+
+                    <select id="preset">
+
+                        <option value="1080p">
+                            1080p — H.264
+                        </option>
+
+                        <option value="720p">
+                            720p — H.264
+                        </option>
+
+                        <option value="720p_hevc">
+                            720p — HEVC / H.265
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div>
+
+                    <label for="format">
+                        Формат контейнера
+                    </label>
+
+                    <select id="format">
+
+                        <option value="mp4">
+                            MP4
+                        </option>
+                    
+                        <option value="webm">
+                            WebM
+                        </option>
+                    
+                        <option value="mkv">
+                            MKV
+                        </option>
+                    
+                    </select>
+
+                </div>
+
+            </div>
+
+            <div>
+
+                <label for="quality" style="margin-top: 15px;">
+                    Качество
+                </label>
+
+                <select id="quality">
+
+                    <option value="high">
+                        Высокое
+                    </option>
+
+                    <option value="medium" selected>
+                        Среднее
+                    </option>
+
+                    <option value="low">
+                        Низкое
+                    </option>
+
+                </select>
+
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 22px;">
+                <button
+                    id="convertButton"
+                    disabled
+                    style="margin-top: 0;"
+                >
+                    Начать перекодировку
+                </button>
+            
+                <button
+                    id="cancelButton"
+                    disabled
+                    style="
+                        margin-top: 0;
+                        background: #dc2626;
+                    "
+                >
+                    Отменить
+                </button>
+            </div>
+
+            <div class="progress-container" id="progressContainer">
+
+                <div class="progress-bar">
+
+                    <div class="progress" id="progress"></div>
+
+                </div>
+
+                <div class="status" id="status">
+                    Подготовка...
+                </div>
+
+            </div>
+
+            <div class="result" id="result">
+
+                <div>
+                    ✅ Видео готово
+                </div>
+
+                <a class="download" id="download" href="#">
+                    Скачать видео
+                </a>
+
+            </div>
+
+            <div class="error" id="error"></div>
+
+        </div>
+
+    </div>
+    <script>const dropZone = document.getElementById("dropZone");
+        const fileInput = document.getElementById("fileInput");
+        
+        const filename = document.getElementById("filename");
+        
+        const convertButton =
+            document.getElementById("convertButton");
+        
+        const cancelButton =
+            document.getElementById("cancelButton");
+        
+        const preset =
+            document.getElementById("preset");
+        
+        const format =
+            document.getElementById("format");
+        
+        const quality =
+            document.getElementById("quality");
+        
+        const progressContainer =
+            document.getElementById("progressContainer");
+        
+        const progress =
+            document.getElementById("progress");
+        
+        const status =
+            document.getElementById("status");
+        
+        const result =
+            document.getElementById("result");
+        
+        const download =
+            document.getElementById("download");
+        
+        const error =
+            document.getElementById("error");
+        
+        
+        let selectedFile = null;
+        
+        let currentJobId = null;
+        
+        
+        /* =========================
+           Выбор файла
+        ========================= */
+        
+        dropZone.addEventListener(
+            "click",
+            () => {
+                fileInput.click();
+            }
+        );
+        
+        
+        fileInput.addEventListener(
+            "change",
+            () => {
+                if (fileInput.files.length) {
+                    selectFile(
+                        fileInput.files[0]
+                    );
+                }
+            }
+        );
+        
+        
+        dropZone.addEventListener(
+            "dragover",
+            event => {
+                event.preventDefault();
+        
+                dropZone.classList.add(
+                    "dragover"
+                );
+            }
+        );
+        
+        
+        dropZone.addEventListener(
+            "dragleave",
+            () => {
+                dropZone.classList.remove(
+                    "dragover"
+                );
+            }
+        );
+        
+        
+        dropZone.addEventListener(
+            "drop",
+            event => {
+                event.preventDefault();
+        
+                dropZone.classList.remove(
+                    "dragover"
+                );
+        
+                if (
+                    event.dataTransfer.files.length
+                ) {
+                    selectFile(
+                        event.dataTransfer.files[0]
+                    );
+                }
+            }
+        );
+        
+        
+        function selectFile(file) {
+        
+            if (!file.type.startsWith("video/")) {
+        
+                showError(
+                    "Пожалуйста, выберите видеофайл."
+                );
+        
+                return;
+            }
+        
+            selectedFile = file;
+        
+            filename.textContent =
+                `${file.name} (${formatBytes(file.size)})`;
+        
+            convertButton.disabled = false;
+        
+            cancelButton.disabled = true;
+        
+            currentJobId = null;
+        
+            hideError();
+        
+            result.style.display = "none";
+        
+            progressContainer.style.display =
+                "none";
+        }
+        
+        
+        /* =========================
+           Запуск перекодировки
+        ========================= */
+        
+        convertButton.addEventListener(
+            "click",
+            async () => {
+        
+                if (!selectedFile) {
+                    return;
+                }
+        
+                convertButton.disabled = true;
+        
+                cancelButton.disabled = false;
+        
+                progressContainer.style.display =
+                    "block";
+        
+                result.style.display = "none";
+        
+                progress.style.width = "0%";
+        
+                status.textContent =
+                    "Загрузка файла...";
+        
+                hideError();
+        
+        
+                const formData =
+                    new FormData();
+        
+                formData.append(
+                    "file",
+                    selectedFile
+                );
+        
+                formData.append(
+                    "output_format",
+                    format.value
+                );
+        
+                formData.append(
+                    "quality",
+                    quality.value
+                );
+        
+                formData.append(
+                    "preset",
+                    preset.value
+                );
+        
+        
+                try {
+        
+                    const response =
+                        await fetch(
+                            "/api/convert",
+                            {
+                                method: "POST",
+                                body: formData
+                            }
+                        );
+        
+        
+                    const data =
+                        await response.json();
+        
+        
+                    if (!response.ok) {
+        
+                        throw new Error(
+                            data.detail ||
+                            "Ошибка загрузки"
+                        );
+                    }
+        
+        
+                    currentJobId =
+                        data.job_id;
+        
+        
+                    await pollJob(
+                        currentJobId
+                    );
+        
+                } catch (err) {
+        
+                    showError(
+                        err.message
+                    );
+        
+                    convertButton.disabled =
+                        false;
+        
+                    cancelButton.disabled =
+                        true;
+        
+                    currentJobId = null;
+                }
+            }
+        );
+        
+        
+        /* =========================
+           Отмена перекодировки
+        ========================= */
+        
+        cancelButton.addEventListener(
+            "click",
+            async () => {
+        
+                if (!currentJobId) {
+                    return;
+                }
+        
+        
+                cancelButton.disabled = true;
+        
+                status.textContent =
+                    "Отмена перекодировки...";
+        
+        
+                try {
+        
+                    const response =
+                        await fetch(
+                            `/api/jobs/${currentJobId}/cancel`,
+                            {
+                                method: "POST"
+                            }
+                        );
+        
+        
+                    const data =
+                        await response.json();
+        
+        
+                    if (!response.ok) {
+        
+                        throw new Error(
+                            data.detail ||
+                            "Не удалось отменить перекодировку"
+                        );
+                    }
+        
+        
+                    status.textContent =
+                        "Ожидание отмены...";
+        
+        
+                    await pollJob(
+                        currentJobId
+                    );
+        
+                } catch (err) {
+        
+                    showError(
+                        err.message
+                    );
+        
+                    cancelButton.disabled =
+                        false;
+                }
+            }
+        );
+        
+        
+        /* =========================
+           Опрос статуса
+        ========================= */
+        
+        async function pollJob(jobId) {
+        
+            while (true) {
+        
+                const response =
+                    await fetch(
+                        `/api/jobs/${jobId}`
+                    );
+        
+        
+                const job =
+                    await response.json();
+        
+        
+                if (!response.ok) {
+        
+                    throw new Error(
+                        job.detail ||
+                        "Ошибка получения статуса"
+                    );
+                }
+        
+        
+                const percent =
+                    job.progress || 0;
+        
+        
+                progress.style.width =
+                    `${percent}%`;
+        
+        
+                if (
+                    job.status === "queued"
+                ) {
+        
+                    status.textContent =
+                        "Видео находится в очереди...";
+                }
+        
+        
+                if (
+                    job.status === "processing"
+                ) {
+        
+                    status.textContent =
+                        `Перекодировка: ${percent}%`;
+                }
+        
+        
+                if (
+                    job.status === "completed"
+                ) {
+        
+                    progress.style.width =
+                        "100%";
+        
+                    status.textContent =
+                        "Готово!";
+        
+                    result.style.display =
+                        "block";
+        
+                    download.href =
+                        job.download_url;
+        
+                    convertButton.disabled =
+                        false;
+        
+                    cancelButton.disabled =
+                        true;
+        
+                    currentJobId = null;
+        
+                    return;
+                }
+        
+        
+                if (
+                    job.status === "cancelled"
+                ) {
+        
+                    progress.style.width =
+                        "0%";
+        
+                    status.textContent =
+                        "Перекодировка отменена.";
+        
+                    convertButton.disabled =
+                        false;
+        
+                    cancelButton.disabled =
+                        true;
+        
+                    currentJobId = null;
+        
+                    return;
+                }
+        
+        
+                if (
+                    job.status === "error"
+                ) {
+        
+                    throw new Error(
+                        job.error ||
+                        "FFmpeg завершился с ошибкой"
+                    );
+                }
+        
+        
+                await sleep(1000);
+            }
+        }
+        
+        
+        /* =========================
+           Вспомогательные функции
+        ========================= */
+        
+        function sleep(ms) {
+        
+            return new Promise(
+                resolve => setTimeout(
+                    resolve,
+                    ms
+                )
+            );
+        }
+        
+        
+        function formatBytes(bytes) {
+        
+            if (bytes === 0) {
+                return "0 B";
+            }
+        
+        
+            const units = [
+                "B",
+                "KB",
+                "MB",
+                "GB"
+            ];
+        
+        
+            const i =
+                Math.floor(
+                    Math.log(bytes) /
+                    Math.log(1024)
+                );
+        
+        
+            return (
+                bytes /
+                Math.pow(1024, i)
+            ).toFixed(1)
+            + " "
+            + units[i];
+        }
+        
+        
+        function showError(message) {
+        
+            error.textContent =
+                message;
+        
+            error.style.display =
+                "block";
+        }
+        
+        
+        function hideError() {
+        
+            error.textContent =
+                "";
+        
+            error.style.display =
+                "none";
+        }</script>
+</body>
+
+</html>
