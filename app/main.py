@@ -134,7 +134,7 @@ async def health():
 
 @app.post("/api/convert")
 async def create_conversion(
-    file: UploadFile = File(...),
+    files: list[UploadFile] = File(...),
 
     output_format: str = Form(
         "mp4"
@@ -166,64 +166,71 @@ async def create_conversion(
             detail="Неподдерживаемое разрешение",
         )
 
-    if not file.filename:
+    if not files:
         raise HTTPException(
             status_code=400,
-            detail="Не указано имя файла",
+            detail="Не выбраны файлы",
         )
 
-    job_id = str(uuid.uuid4())
+    jobs = []
 
-    original_name = safe_filename(
-        file.filename
-    )
+    for file in files:
+        job_id = str(uuid.uuid4())
 
-    input_path = (
-        INPUT_DIR
-        / f"{job_id}_{original_name}"
-    )
+        original_name = safe_filename(
+            file.filename or "video"
+        )
 
-    output_extension = (
-        ALLOWED_FORMATS[
-            output_format
-        ]["extension"]
-    )
+        input_path = (
+            INPUT_DIR
+            / f"{job_id}_{original_name}"
+        )
 
-    output_name = (
-        f"{Path(original_name).stem}"
-        f"_{preset}"
-        f"_{job_id[:8]}."
-        f"{output_extension}"
-    )
+        output_extension = (
+            ALLOWED_FORMATS[
+                output_format
+            ]["extension"]
+        )
 
-    output_path = (
-        OUTPUT_DIR / output_name
-    )
+        output_name = (
+            f"{Path(original_name).stem}"
+            f"_{preset}"
+            f"_{job_id[:8]}."
+            f"{output_extension}"
+        )
 
-    file_size = await save_upload(
-        file,
-        input_path,
-    )
+        output_path = (
+            OUTPUT_DIR / output_name
+        )
 
-    task = convert_video.apply_async(
-        kwargs={
-            "job_id": job_id,
-            "input_path": str(input_path),
-            "output_path": str(output_path),
-            "output_format": output_format,
-            "quality": quality,
+        file_size = await save_upload(
+            file,
+            input_path,
+        )
+
+        task = convert_video.apply_async(
+            kwargs={
+                "job_id": job_id,
+                "input_path": str(input_path),
+                "output_path": str(output_path),
+                "output_format": output_format,
+                "quality": quality,
+                "preset": preset,
+            },
+            task_id=job_id,
+        )
+
+        jobs.append({
+            "job_id": task.id,
+            "status": "queued",
+            "filename": original_name,
+            "size": file_size,
             "preset": preset,
-        },
-        task_id=job_id,
-    )
+            "format": output_format,
+        })
 
     return {
-        "job_id": task.id,
-        "status": "queued",
-        "filename": original_name,
-        "size": file_size,
-        "preset": preset,
-        "format": output_format,
+        "jobs": jobs,
     }
 
 @app.post("/api/jobs/{job_id}/cancel")

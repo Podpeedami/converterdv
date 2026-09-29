@@ -194,7 +194,7 @@
         }
 
         .result {
-            display: none;
+            display: block;
 
             margin-top: 25px;
             padding: 18px;
@@ -277,7 +277,13 @@
 
                 <div class="filename" id="filename"></div>
 
-                <input type="file" id="fileInput" accept="video/*" hidden>
+                <input
+                    type="file"
+                    id="fileInput"
+                    accept="video/*"
+                    multiple
+                    hidden
+                >
 
             </div>
 
@@ -393,15 +399,6 @@
             </div>
 
             <div class="result" id="result">
-
-                <div>
-                    ✅ Видео готово
-                </div>
-
-                <a class="download" id="download" href="#">
-                    Скачать видео
-                </a>
-
             </div>
 
             <div class="error" id="error"></div>
@@ -441,16 +438,15 @@
         const result =
             document.getElementById("result");
         
-        const download =
-            document.getElementById("download");
         
         const error =
             document.getElementById("error");
         
         
-        let selectedFile = null;
+        let selectedFiles = [];
         
         let currentJobId = null;
+        let currentJobIds = [];
         
         
         /* =========================
@@ -469,9 +465,11 @@
             "change",
             () => {
                 if (fileInput.files.length) {
-                    selectFile(
-                        fileInput.files[0]
+                    const files = Array.from(
+                         fileInput.files
                     );
+
+                    selectFiles(files);
                 }
             }
         );
@@ -511,29 +509,31 @@
                 if (
                     event.dataTransfer.files.length
                 ) {
-                    selectFile(
-                        event.dataTransfer.files[0]
+                    const files = Array.from(
+                        event.dataTransfer.files
                     );
+
+                    selectFiles(files);
                 }
             }
         );
         
         
-        function selectFile(file) {
+        function selectFiles(files) {
         
-            if (!file.type.startsWith("video/")) {
-        
-                showError(
-                    "Пожалуйста, выберите видеофайл."
-                );
-        
-                return;
+            for (const file of files) {
+                if (!file.type.startsWith("video/")) {
+                    showError(
+                        "Пожалуйста, выберите только видеофайлы."
+                    );
+                    return;
+                }
             }
         
-            selectedFile = file;
-        
+            selectedFiles = files;
+
             filename.textContent =
-                `${file.name} (${formatBytes(file.size)})`;
+                `Выбрано файлов: ${files.length}`;
         
             convertButton.disabled = false;
         
@@ -558,7 +558,7 @@
             "click",
             async () => {
         
-                if (!selectedFile) {
+                if (!selectedFiles.length) {
                     return;
                 }
         
@@ -582,10 +582,12 @@
                 const formData =
                     new FormData();
         
-                formData.append(
-                    "file",
-                    selectedFile
-                );
+                for (const file of selectedFiles) {
+                    formData.append(
+                        "files",
+                        file
+                    );
+                }
         
                 formData.append(
                     "output_format",
@@ -629,12 +631,37 @@
         
         
                     currentJobId =
-                        data.job_id;
-        
-        
-                    await pollJob(
-                        currentJobId
+                        data.jobs[0].job_id;
+
+                    currentJobIds = data.jobs.map(
+                        job => job.job_id
                     );
+
+                    result.innerHTML = "";
+
+                    result.style.display = "block";
+
+                    for (const job of data.jobs) {
+                        createJobCard(
+                            job.job_id,
+                                job.filename
+                        );
+                    }
+        
+        
+                    await Promise.all(
+                        currentJobIds.map(
+                            jobId => pollJob(jobId)
+                        )
+                    );
+
+                    convertButton.disabled =
+                        false;
+
+                    cancelButton.disabled =
+                        true;
+
+                    currentJobId = null;
         
                 } catch (err) {
         
@@ -722,7 +749,83 @@
            Опрос статуса
         ========================= */
         
-        async function pollJob(jobId) {
+function createJobCard(jobId, filename) {
+
+    const card =
+        document.createElement("div");
+
+    card.className =
+        "job-card";
+
+    card.dataset.jobId =
+        jobId;
+
+    card.innerHTML = `
+        <div style="margin-bottom: 8px;">
+            <strong>${filename}</strong>
+        </div>
+
+        <div
+            class="progress-container"
+            style="display: block;"
+        >
+            <div class="progress-bar">
+                <div
+                    class="progress"
+                    data-progress="${jobId}"
+            ></div>
+        </div>
+
+        <div
+            class="status"
+            data-status="${jobId}"
+        >
+            Подготовка...
+        </div>
+    </div>
+
+    <div
+        class="job-result"
+        data-result="${jobId}"
+        style="display: block; margin-top: 10px;"
+    >
+        <a
+            class="download"
+            data-download="${jobId}"
+            href="#"
+        >
+            Скачать видео
+        </a>
+    </div>
+`;
+
+result.appendChild(card);
+
+return card;
+}
+
+
+async function pollJob(jobId) {
+    
+    const progressElement =
+        document.querySelector(
+            `[data-progress="${jobId}"]`
+    );
+
+    const statusElement =
+        document.querySelector(
+            `[data-status="${jobId}"]`
+    );
+
+    const resultElement =
+        document.querySelector(
+            `[data-result="${jobId}"]`
+    );
+
+    const downloadElement =
+        document.querySelector(
+            `[data-download="${jobId}"]`
+    );
         
             while (true) {
         
@@ -749,7 +852,7 @@
                     job.progress || 0;
         
         
-                progress.style.width =
+                progressElement.style.width =
                     `${percent}%`;
         
         
@@ -757,7 +860,7 @@
                     job.status === "queued"
                 ) {
         
-                    status.textContent =
+                    statusElement.textContent =
                         "Видео находится в очереди...";
                 }
         
@@ -766,7 +869,7 @@
                     job.status === "processing"
                 ) {
         
-                    status.textContent =
+                    statusElement.textContent =
                         `Перекодировка: ${percent}%`;
                 }
         
@@ -775,25 +878,17 @@
                     job.status === "completed"
                 ) {
         
-                    progress.style.width =
+                    progressElement.style.width =
                         "100%";
-        
-                    status.textContent =
+
+                    statusElement.textContent =
                         "Готово!";
-        
-                    result.style.display =
+
+                    resultElement.style.display =
                         "block";
-        
-                    download.href =
+
+                    downloadElement.href =
                         job.download_url;
-        
-                    convertButton.disabled =
-                        false;
-        
-                    cancelButton.disabled =
-                        true;
-        
-                    currentJobId = null;
         
                     return;
                 }
@@ -803,10 +898,10 @@
                     job.status === "cancelled"
                 ) {
         
-                    progress.style.width =
+                    progressElement.style.width =
                         "0%";
-        
-                    status.textContent =
+
+                    statusElement.textContent =
                         "Перекодировка отменена.";
         
                     convertButton.disabled =
