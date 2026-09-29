@@ -9,7 +9,7 @@ services:
     restart: unless-stopped
 
   api:
-    build: .
+    image: ghcr.io/podpeedami/converterdv:latest
     container_name: video-api
     command: >
       uvicorn app.main:app
@@ -27,7 +27,7 @@ services:
     restart: unless-stopped
 
   worker:
-    build: .
+    image: ghcr.io/podpeedami/converterdv:latest
     container_name: video-worker
     command: >
       celery
