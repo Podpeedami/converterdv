@@ -207,6 +207,17 @@
             text-align: center;
         }
 
+        .job-card {
+            margin-top: 15px;
+            padding: 18px;
+            border-radius: 12px;
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .job-card:first-child {
+            margin-top: 0;
+        }
+
         .download {
             display: inline-block;
 
@@ -688,56 +699,51 @@
         cancelButton.addEventListener(
             "click",
             async () => {
-        
-                if (!currentJobId) {
+
+                if (!currentJobIds.length) {
                     return;
                 }
-        
-        
+
                 cancelButton.disabled = true;
-        
-                status.textContent =
-                    "Отмена перекодировки...";
-        
-        
+
                 try {
-        
-                    const response =
-                        await fetch(
-                            `/api/jobs/${currentJobId}/cancel`,
-                            {
-                                method: "POST"
+
+                    await Promise.all(
+                        currentJobIds.map(
+                            async jobId => {
+
+                                const response =
+                                    await fetch(
+                                        `/api/jobs/${jobId}/cancel`,
+                                        {
+                                            method: "POST"
+                                        }
+                                    );
+
+                                const data =
+                                    await response.json();
+
+                                // Если файл уже успел завершиться,
+                                // это не ошибка отмены остальных файлов.
+                                if (
+                                    !response.ok &&
+                                    response.status !== 409
+                                ) {
+                                    throw new Error(
+                                        data.detail ||
+                                        "Не удалось отменить перекодировку"
+                                    );
+                                }
                             }
-                        );
-        
-        
-                    const data =
-                        await response.json();
-        
-        
-                    if (!response.ok) {
-        
-                        throw new Error(
-                            data.detail ||
-                            "Не удалось отменить перекодировку"
-                        );
-                    }
-        
-        
-                    status.textContent =
-                        "Ожидание отмены...";
-        
-        
-                    await pollJob(
-                        currentJobId
+                        )
                     );
-        
-                } catch (err) {
-        
+
+                 } catch (err) {
+
                     showError(
                         err.message
                     );
-        
+
                     cancelButton.disabled =
                         false;
                 }

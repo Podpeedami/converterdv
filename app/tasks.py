@@ -263,13 +263,16 @@ def convert_video(
         if process.returncode != 0:
             raise RuntimeError(stderr[-5000:])
 
+        # Исходный файл больше не нужен после успешной перекодировки
+        input_file.unlink(missing_ok=True)
+
         self.update_state(
             state="PROGRESS",
             meta={
                 "job_id": job_id,
                 "progress": 100,
                 "status": "completed",
-            },
+             },
         )
 
         return {
