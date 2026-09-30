@@ -1,6 +1,7 @@
 services:
   api:
     image: ghcr.io/podpeedami/converterdv:latest
+    build: .
     container_name: video-api
 
     environment:
