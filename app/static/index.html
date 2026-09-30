@@ -234,6 +234,73 @@
             background: rgba(34, 197, 94, 0.1);
         }
 
+        .input-files {
+            margin-top: 25px;
+        }
+
+        .input-files-title {
+            margin-bottom: 12px;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+
+        .input-file-card {
+            margin-top: 10px;
+            padding: 16px;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            background: #111827;
+        }
+
+        .input-file-card:first-child {
+            margin-top: 0;
+        }
+
+        .input-file-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .input-file-info {
+            min-width: 0;
+        }
+
+        .input-file-name {
+            margin-bottom: 6px;
+            word-break: break-all;
+            font-weight: 600;
+        }
+
+        .input-file-size {
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        .input-file-button {
+            flex-shrink: 0;
+            width: auto;
+            margin-top: 0;
+            padding: 10px 16px;
+            white-space: nowrap;
+        }
+
+        .input-file-name {
+            margin-bottom: 6px;
+            word-break: break-all;
+            font-weight: 600;
+        }
+
+        .input-file-size {
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        .input-file-button {
+            margin-top: 12px;
+        }
+
         .job-card:first-child {
             margin-top: 0;
         }
@@ -438,10 +505,21 @@
 
             <div class="error" id="error"></div>
 
+            <div class="input-files" id="inputFiles">
+                <div class="input-files-title">
+                    Файлы в папке input
+                </div>
+            
+                <div id="inputFilesList"></div>
+            </div>
+
         </div>
 
     </div>
     <script>const dropZone = document.getElementById("dropZone");
+        const inputFilesList =
+            document.getElementById("inputFilesList");
+
         const fileInput = document.getElementById("fileInput");
         
         const filename = document.getElementById("filename");
@@ -961,7 +1039,123 @@ async function pollJob(jobId) {
             }
         }
         
-        
+        async function loadInputFiles() {
+    try {
+        const response = await fetch("/api/input-files");
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail || "Не удалось получить список файлов"
+            );
+        }
+
+        inputFilesList.innerHTML = "";
+
+        for (const file of data.files) {
+            const card = document.createElement("div");
+            card.className = "input-file-card";
+
+            const header = document.createElement("div");
+            header.className = "input-file-header";
+
+            const info = document.createElement("div");
+            info.className = "input-file-info";
+
+            const name = document.createElement("div");
+            name.className = "input-file-name";
+            name.textContent = file.name;
+
+            const size = document.createElement("div");
+            size.className = "input-file-size";
+            size.textContent = formatBytes(file.size);
+
+            info.appendChild(name);
+            info.appendChild(size);
+
+            const button = document.createElement("button");
+            button.className = "input-file-button";
+            button.textContent = "Конвертировать";
+
+            button.addEventListener("click", () => {
+                convertExistingFile(file.name);
+            });
+
+            header.appendChild(info);
+            header.appendChild(button);
+
+            card.appendChild(header);
+
+            inputFilesList.appendChild(card);
+        }
+    } catch (err) {
+        showError(err.message);
+    }
+}
+
+async function convertExistingFile(filename) {
+    convertButton.disabled = true;
+    cancelButton.disabled = false;
+
+    progressContainer.style.display = "block";
+    result.style.display = "block";
+    progress.style.width = "0%";
+    status.textContent = "Подготовка файла...";
+    result.innerHTML = "";
+
+    hideError();
+
+    const formData = new FormData();
+
+    formData.append("filename", filename);
+    formData.append("output_format", format.value);
+    formData.append("quality", quality.value);
+    formData.append("preset", preset.value);
+
+    try {
+        const response = await fetch(
+            "/api/convert-existing",
+            {
+                method: "POST",
+                body: formData
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail || "Ошибка запуска конвертации"
+            );
+        }
+
+        currentJobId = data.job_id;
+        currentJobIds = [data.job_id];
+
+        createJobCard(
+            data.job_id,
+            data.filename
+        );
+
+        await pollJob(data.job_id);
+
+        convertButton.disabled = false;
+        cancelButton.disabled = true;
+        currentJobId = null;
+        currentJobIds = [];
+
+        await loadInputFiles();
+
+    } catch (err) {
+        showError(err.message);
+
+        convertButton.disabled = false;
+        cancelButton.disabled = true;
+        currentJobId = null;
+        currentJobIds = [];
+    }
+}
+
         /* =========================
            Вспомогательные функции
         ========================= */
@@ -1020,12 +1214,13 @@ async function pollJob(jobId) {
         
         function hideError() {
         
-            error.textContent =
-                "";
-        
-            error.style.display =
-                "none";
-        }</script>
+            error.textContent ="";
+            error.style.display ="none";
+        }
+
+        loadInputFiles();
+        setInterval(loadInputFiles, 5000);
+        </script>
 </body>
 
 </html>

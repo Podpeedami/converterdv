@@ -149,6 +149,90 @@ async def health():
         "service": "video-converter",
     }
 
+@app.get("/api/input-files")
+async def get_input_files():
+    files = []
+
+    for path in INPUT_DIR.iterdir():
+        if not path.is_file():
+            continue
+
+        files.append({
+            "name": path.name,
+            "size": path.stat().st_size,
+        })
+
+    return {
+        "files": files,
+    }
+
+@app.post("/api/convert-existing")
+async def convert_existing_file(
+    filename: str = Form(...),
+    output_format: str = Form("mp4"),
+    quality: str = Form("medium"),
+    preset: str = Form("1080p"),
+):
+    if output_format not in ALLOWED_FORMATS:
+        raise HTTPException(
+            status_code=400,
+            detail="Неподдерживаемый формат",
+        )
+
+    if quality not in ALLOWED_QUALITY:
+        raise HTTPException(
+            status_code=400,
+            detail="Неподдерживаемое качество",
+        )
+
+    if preset not in ALLOWED_PRESETS:
+        raise HTTPException(
+            status_code=400,
+            detail="Неподдерживаемое разрешение",
+        )
+
+    safe_name = Path(filename).name
+    input_path = INPUT_DIR / safe_name
+
+    if not input_path.exists() or not input_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Файл не найден",
+        )
+
+    job_id = str(uuid.uuid4())
+
+    output_extension = ALLOWED_FORMATS[output_format]["extension"]
+
+    output_name = (
+        f"{Path(safe_name).stem}"
+        f"_{preset}"
+        f"_{job_id[:8]}."
+        f"{output_extension}"
+    )
+
+    output_path = OUTPUT_DIR / output_name
+
+    task = convert_video.apply_async(
+        kwargs={
+            "job_id": job_id,
+            "input_path": str(input_path),
+            "output_path": str(output_path),
+            "output_format": output_format,
+            "quality": quality,
+            "preset": preset,
+        },
+        task_id=job_id,
+    )
+
+    return {
+        "job_id": task.id,
+        "status": "queued",
+        "filename": safe_name,
+        "size": input_path.stat().st_size,
+        "preset": preset,
+        "format": output_format,
+    }
 
 @app.post("/api/convert")
 async def create_conversion(
