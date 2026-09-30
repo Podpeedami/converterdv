@@ -1,6 +1,12 @@
-# Video Converter — Docker Compose
+<p align="center">
+  <img src="assets/logo.png" alt="ConverterKDV" width="220">
+</p>
 
-Веб-приложение для перекодирования видео на базе:
+<h1 align="center">ConverterKDV</h1>
+
+<p align="center">
+  Веб-приложение для перекодирования видео
+</p>
 
 - FastAPI — веб-интерфейс и API
 - Celery — очередь и выполнение задач
