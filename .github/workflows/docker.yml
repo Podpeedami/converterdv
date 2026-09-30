@@ -40,4 +40,4 @@ jobs:
           push: true
           tags: |
             ghcr.io/podpeedami/converterdv:latest
-            ghcr.io/podpeedami/converterdv:${{ github.event.release.tag_name || 'latest' }}
+            ghcr.io/podpeedami/converterdv:${{ github.event.inputs.release_tag || github.event.release.tag_name || 'latest' }}
