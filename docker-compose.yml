@@ -1,45 +1,54 @@
 services:
-  redis:
-    image: redis:7-alpine
-    container_name: video-redis
-    command: redis-server --appendonly yes
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-
   api:
     image: ghcr.io/podpeedami/converterdv:latest
     container_name: video-api
-    command: >
-      uvicorn app.main:app
-      --host 0.0.0.0
-      --port 8000
-    ports:
-      - "${PORT}:8000"
+
     environment:
-      REDIS_URL: redis://redis:6379/0
-      MAX_UPLOAD_SIZE: "${MAX_UPLOAD_SIZE}"
+      - REDIS_URL=redis://redis:6379/0
+      - MAX_UPLOAD_SIZE=10G # Maximum upload size
+
     volumes:
-      - "${DATA_PATH}:/data"
+      - ./data:/data # Input/output video files
+
+    ports:
+      - "8090:8000" # Web interface: http://localhost:8080
+
     depends_on:
       - redis
+
     restart: unless-stopped
 
   worker:
     image: ghcr.io/podpeedami/converterdv:latest
     container_name: video-worker
+
     command: >
       celery
       -A app.celery_app.celery_app
       worker
       --loglevel=info
       --concurrency=2
+
     environment:
-      REDIS_URL: redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
+
     volumes:
-      - "${DATA_PATH}:/data"
+      - ./data:/data # Input/output video files
+
     depends_on:
       - redis
+
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: video-redis
+
+    command: redis-server --appendonly yes
+
+    volumes:
+      - redis_data:/data
+
     restart: unless-stopped
 
 volumes:

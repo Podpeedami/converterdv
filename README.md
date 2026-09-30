@@ -1,62 +1,49 @@
 # Video Converter
 
-Веб-приложение для перекодирования видео через браузер.
+Веб-приложение для перекодирования видео.
 
-Стек:
-- FastAPI — API и веб-интерфейс
-- Celery — фоновые задачи перекодирования
-- Redis — брокер и хранилище результатов Celery
+Использует:
+
+- FastAPI — веб-интерфейс и API
+- Celery — фоновые задачи
+- Redis — очередь задач
 - FFmpeg — перекодирование видео
-- Docker Compose — запуск всех компонентов
+- Docker — запуск приложения
 
 ## Возможности
 
 - загрузка одного или нескольких видеофайлов;
-- несколько файлов обрабатываются отдельными фоновыми задачами;
-- отмена одной или всех выбранных перекодировок;
-- прогресс перекодирования;
-- пресеты разрешения:
-  - `1080p` — 1920×1080, H.264;
-  - `720p` — 1280×720, H.264;
-  - `720p_hevc` — 1280×720, H.265/HEVC;
-- форматы вывода:
-  - MP4;
-  - MKV;
-  - WebM;
-- качество: `low`, `medium`, `high`;
-- после успешного перекодирования исходный файл удаляется из `data/input`;
-- готовые файлы сохраняются в `data/output`;
-- данные и настройки можно изменить без пересборки Docker-образа.
-
-## Требования
-
-На компьютере должны быть установлены:
-
-- Docker Desktop (Windows/macOS) или Docker Engine + Docker Compose (Linux);
-- доступ к GitHub Container Registry (образ опубликован как `ghcr.io/podpeedami/converterdv:latest`).
-
-Для обычного запуска исходный код и FFmpeg устанавливать на компьютер не требуется.
+- одновременная обработка нескольких файлов;
+- выбор формата результата: MP4, WebM, MKV;
+- выбор разрешения: 1080p, 720p, 720p HEVC;
+- выбор качества: Low, Medium, High;
+- отображение прогресса перекодирования;
+- отмена отдельных задач;
+- отмена всех выбранных задач;
+- автоматическое удаление исходного файла после успешного перекодирования;
+- ограничение размера загружаемого файла;
+- данные хранятся на диске пользователя.
 
 ## Быстрый запуск
 
-Создайте отдельную папку для приложения и поместите в неё:
+### Требования
 
-- `docker-compose.yml`
-- `.env`
+Необходимы Docker Desktop и Docker Compose.
 
-Скопировать пример настроек:
+Проверить Docker:
 
 ```bash
-cp .env.example .env
+docker --version
+docker compose version
 ```
 
-В Windows PowerShell можно:
+## Запуск
 
-```powershell
-Copy-Item .env.example .env
+Скачайте проект и перейдите в его каталог:
+
+```bash
+cd video-converter
 ```
-
-После этого при необходимости измените `.env`.
 
 Запустите приложение:
 
@@ -64,69 +51,68 @@ Copy-Item .env.example .env
 docker compose up -d
 ```
 
-Проверьте состояние:
+После запуска откройте:
+
+```text
+http://localhost:8080
+```
+
+## Остановка
+
+```bash
+docker compose down
+```
+
+Запуск снова:
+
+```bash
+docker compose up -d
+```
+
+## Обновление
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+## Проверка состояния
 
 ```bash
 docker compose ps
 ```
 
-После запуска откройте в браузере:
+Логи:
+
+```bash
+docker compose logs
+```
+
+Логи API:
+
+```bash
+docker compose logs api
+```
+
+Логи worker:
+
+```bash
+docker compose logs worker
+```
+
+Логи Redis:
+
+```bash
+docker compose logs redis
+```
+
+## Хранение файлов
+
+Все входные и выходные видео находятся в каталоге:
 
 ```text
-http://localhost:8080
+./data
 ```
-
-Если в `.env` указан другой порт, используйте его.
-
-## Настройки `.env`
-
-Пример:
-
-```env
-PORT=8080
-DATA_PATH=./data
-MAX_UPLOAD_SIZE=10G
-```
-
-### `PORT`
-
-Порт, на котором приложение будет доступно на хост-машине.
-
-Например:
-
-```env
-PORT=8080
-```
-
-Тогда приложение открывается по адресу:
-
-```text
-http://localhost:8080
-```
-
-Можно изменить:
-
-```env
-PORT=9000
-```
-
-Тогда адрес будет:
-
-```text
-http://localhost:9000
-```
-
-### `DATA_PATH`
-
-Папка на хост-машине, в которой будут храниться входные и готовые файлы.
-
-По умолчанию:
-
-```env
-DATA_PATH=./data
-```
-
-Docker Compose использует её как `/data` внутри контейнеров.
 
 Структура:
 
@@ -136,178 +122,278 @@ data/
 └── output/
 ```
 
-На Linux/macOS можно указать абсолютный путь:
+В Docker этот каталог подключается как:
 
-```env
-DATA_PATH=/srv/video-converter/data
+```text
+./data:/data
 ```
 
-На Windows с Docker Desktop рекомендуется использовать путь, доступный Docker Desktop, например:
+Исходные видео помещаются в `data/input/`.
 
-```env
-DATA_PATH=./data
+Готовые видео появляются в `data/output/`.
+
+После успешного перекодирования исходный файл автоматически удаляется из `data/input/`.
+
+## Настройки
+
+Основные настройки находятся непосредственно в `docker-compose.yml`.
+
+### Порт
+
+По умолчанию:
+
+```yaml
+ports:
+  - "8080:8000"
 ```
 
-### `MAX_UPLOAD_SIZE`
+Веб-интерфейс:
 
-Максимальный суммарный размер загружаемого файла.
+```text
+http://localhost:8080
+```
+
+Чтобы использовать другой порт, например `9000`:
+
+```yaml
+ports:
+  - "9000:8000"
+```
+
+После изменения:
+
+```bash
+docker compose up -d
+```
+
+### Максимальный размер загрузки
+
+По умолчанию:
+
+```yaml
+- MAX_UPLOAD_SIZE=10G
+```
 
 Например:
 
-```env
-MAX_UPLOAD_SIZE=10G
+```yaml
+- MAX_UPLOAD_SIZE=20G
 ```
 
-Поддерживаются суффиксы:
+Поддерживаются значения:
 
-- `B` — байты;
-- `K` — KiB;
-- `M` — MiB;
-- `G` — GiB;
-- `T` — TiB.
-
-Также можно указать число без суффикса — оно трактуется как байты.
-
-Примеры:
-
-```env
-MAX_UPLOAD_SIZE=500M
-MAX_UPLOAD_SIZE=2G
-MAX_UPLOAD_SIZE=10G
+```text
+500M
+2G
+10G
+1.5G
 ```
 
-## Остановка и запуск
+### Каталог данных
 
-Остановить контейнеры:
+По умолчанию:
+
+```yaml
+volumes:
+  - ./data:/data
+```
+
+При необходимости можно изменить путь:
+
+```yaml
+volumes:
+  - D:/Videos/converter:/data
+```
+
+## Docker-контейнеры
+
+Приложение состоит из трёх контейнеров.
+
+### API
+
+```text
+video-api
+```
+
+Отвечает за веб-интерфейс, загрузку файлов, создание задач, получение статуса задач и скачивание результатов.
+
+### Worker
+
+```text
+video-worker
+```
+
+Выполняет перекодирование видео с помощью FFmpeg.
+
+По умолчанию запускается два параллельных процесса:
+
+```text
+--concurrency=2
+```
+
+### Redis
+
+```text
+video-redis
+```
+
+Используется как очередь задач Celery.
+
+Данные Redis сохраняются в Docker volume `redis_data`.
+
+## Архитектура
+
+```text
+Browser
+   │
+   ▼
+API (FastAPI)
+   │
+   ▼
+Redis
+   │
+   ▼
+Celery Worker
+   │
+   ▼
+FFmpeg
+   │
+   ├── data/input
+   │
+   └── data/output
+```
+
+## Docker Compose
+
+Основная конфигурация находится в одном файле `docker-compose.yml`.
+
+Полная конфигурация:
+
+```yaml
+services:
+  api:
+    image: ghcr.io/podpeedami/converterdv:latest
+    container_name: video-api
+
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - MAX_UPLOAD_SIZE=10G
+
+    volumes:
+      - ./data:/data
+
+    ports:
+      - "8080:8000"
+
+    depends_on:
+      - redis
+
+    restart: unless-stopped
+
+  worker:
+    image: ghcr.io/podpeedami/converterdv:latest
+    container_name: video-worker
+
+    command: >
+      celery
+      -A app.celery_app.celery_app
+      worker
+      --loglevel=info
+      --concurrency=2
+
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+
+    volumes:
+      - ./data:/data
+
+    depends_on:
+      - redis
+
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: video-redis
+
+    command: redis-server --appendonly yes
+
+    volumes:
+      - redis_data:/data
+
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+```
+
+## Полезные команды
+
+Запуск:
+
+```bash
+docker compose up -d
+```
+
+Остановка:
 
 ```bash
 docker compose down
 ```
 
-Запустить снова:
+Перезапуск:
 
 ```bash
-docker compose up -d
+docker compose restart
 ```
 
-Посмотреть логи API:
-
-```bash
-docker compose logs -f api
-```
-
-Посмотреть логи worker:
-
-```bash
-docker compose logs -f worker
-```
-
-## Обновление приложения
-
-Приложение использует готовый Docker-образ из GitHub Container Registry.
-
-Чтобы получить последнюю опубликованную версию:
+Обновление:
 
 ```bash
 docker compose pull
-```
-
-Затем пересоздайте контейнеры:
-
-```bash
 docker compose up -d
 ```
 
-Проверить состояние:
+Статус:
 
 ```bash
 docker compose ps
 ```
 
-Важно: `docker compose pull` обновляет Docker-образ, но не обновляет сам файл `docker-compose.yml`. Если `docker-compose.yml` распространяется отдельно, его нужно обновить отдельно.
+Логи:
 
-## Данные
-
-Входящие файлы:
-
-```text
-data/input/
+```bash
+docker compose logs -f
 ```
 
-Готовые файлы:
+## Docker Image
 
-```text
-data/output/
-```
-
-После успешного перекодирования исходный файл из `input` удаляется.
-
-Redis хранит свои данные в отдельном Docker volume `redis_data`.
-
-## Безопасность
-
-По умолчанию приложение предназначено для запуска в локальной сети или за reverse proxy.
-
-Если открыть порт приложения непосредственно в интернет, рекомендуется дополнительно настроить:
-
-- HTTPS;
-- reverse proxy;
-- аутентификацию;
-- ограничения размера и частоты запросов;
-- firewall.
-
-Не публикуйте Redis наружу: в текущем `docker-compose.yml` порт Redis не пробрасывается на хост.
-
-## Архитектура
-
-```text
-Браузер
-   │
-   ▼
-FastAPI (api)
-   │
-   ├── загрузка → /data/input
-   │
-   └── Celery task → Redis
-                     │
-                     ▼
-                 worker
-                     │
-                     ▼
-                   FFmpeg
-                     │
-                     ▼
-              /data/output
-```
-
-API и worker используют один и тот же каталог `/data`, поэтому worker может обработать файл, который загрузил API.
-
-## Пример структуры
-
-```text
-video-converter/
-├── docker-compose.yml
-├── .env
-├── .env.example
-└── data/
-    ├── input/
-    └── output/
-```
-
-Файл `.env` содержит локальные настройки и не должен добавляться в Git.
-
-`.env.example` можно хранить в репозитории как шаблон.
-
-## Docker-образ
-
-Используется образ:
+Проект использует Docker image:
 
 ```text
 ghcr.io/podpeedami/converterdv:latest
 ```
 
-Образ публикуется через GitHub Actions.
+При обновлении проекта:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+## Разработка
+
+Исходный код находится в каталоге `app/`.
+
+```text
+app/
+├── main.py
+├── celery_app.py
+├── tasks.py
+└── static/
+    └── index.html
+```
 
 ## Лицензия
 
-Добавьте сюда лицензию проекта, если она будет использоваться.
+Проект предоставляется для использования и дальнейшего развития.
