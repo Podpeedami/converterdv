@@ -8,6 +8,11 @@ on:
     types:
       - published
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Docker image tag"
+        required: true
+        default: "v1.0.0"
 
 permissions:
   contents: read
