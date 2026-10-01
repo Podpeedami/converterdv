@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import time
 from pathlib import Path
 
 from redis import Redis
@@ -119,6 +120,8 @@ def convert_video(
     output_file = Path(output_path)
 
     cancel_key = f"video:cancel:{job_id}"
+    start_time = time.monotonic()
+    smoothed_speed = 0.0
 
     if redis_client.get(cancel_key):
         redis_client.delete(cancel_key)
@@ -236,6 +239,24 @@ def convert_video(
             try:
                 current_time = int(value) / 1_000_000
 
+                elapsed = time.monotonic() - start_time
+                instant_speed = current_time / elapsed if elapsed > 0 else 0
+
+                if instant_speed > 0:
+                    if smoothed_speed == 0:
+                        smoothed_speed = instant_speed
+                    else:
+                        smoothed_speed = (
+                            smoothed_speed * 0.8
+                            + instant_speed * 0.2
+                        )
+
+                remaining_seconds = (
+                    int((duration - current_time) / smoothed_speed)
+                    if smoothed_speed > 0 and current_time < duration
+                    else 0
+                )
+
                 if duration > 0:
                     progress = int(
                         (current_time / duration) * 100
@@ -252,6 +273,7 @@ def convert_video(
                             "job_id": job_id,
                             "progress": progress,
                             "status": "processing",
+                            "remaining_seconds": remaining_seconds,
                         },
                     )
 

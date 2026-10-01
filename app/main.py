@@ -397,6 +397,7 @@ async def get_job(job_id: str):
             "job_id": job_id,
             "status": "processing",
             "progress": info.get("progress", 0),
+            "remaining_seconds": info.get("remaining_seconds", 0),
         }
 
     if task.state == "SUCCESS":

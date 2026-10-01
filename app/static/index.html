@@ -977,8 +977,10 @@ async function pollJob(jobId) {
                     job.status === "processing"
                 ) {
         
+                    const remaining = job.remaining_seconds || 0;
+
                     statusElement.textContent =
-                        `Перекодировка: ${percent}%`;
+                        `Перекодировка: ${percent}% • осталось ${formatTime(remaining)}`;
                 }
         
         
@@ -1170,7 +1172,20 @@ async function convertExistingFile(filename) {
             );
         }
         
-        
+        function formatTime(seconds) {
+            seconds = Math.max(0, Number(seconds) || 0);
+
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+
+            if (hours > 0) {
+                return `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+            }
+
+            return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+        }
+
         function formatBytes(bytes) {
         
             if (bytes === 0) {
