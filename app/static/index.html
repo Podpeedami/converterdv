@@ -9,6 +9,17 @@
     <title>ConverterKDV</title>
 
     <style>
+
+        .video-info {
+            margin: 10px 0 12px 0;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            font-size: 13px;
+            line-height: 1.6;
+            color: #cfcfcf;
+        }
+
         * {
             box-sizing: border-box;
         }
@@ -560,6 +571,7 @@
         
         let currentJobId = null;
         let currentJobIds = [];
+        let inputFilesLoading = false;
         
         
         /* =========================
@@ -859,6 +871,7 @@
         
 function createJobCard(jobId, filename) {
 
+
     const card =
         document.createElement("div");
 
@@ -909,9 +922,55 @@ function createJobCard(jobId, filename) {
 
 result.appendChild(card);
 
+loadVideoInfo(filename, jobId);
+
 return card;
 }
 
+async function loadVideoInfo(filename, jobId) {
+    try {
+        const response = await fetch(
+            `/api/video-info?filename=${encodeURIComponent(filename)}`
+        );
+
+        const info = await response.json();
+
+        if (!response.ok) {
+            return;
+        }
+
+        const card = document.querySelector(
+            `[data-job-id="${jobId}"]`
+        );
+
+        if (!card) {
+            return;
+        }
+
+        const videoInfo = document.createElement("div");
+
+        videoInfo.className = "video-info";
+
+        videoInfo.innerHTML = `
+            <div>Разрешение: ${info.width} × ${info.height}</div>
+            <div>Кодек: ${info.codec}</div>
+            <div>FPS: ${formatFps(info.fps)}</div>
+            <div>Размер: ${formatBytes(info.size)}</div>
+            <div>Длительность: ${formatTime(Math.round(info.duration))}</div>
+        `;
+
+        card.insertBefore(
+            videoInfo,
+            card.querySelector(".progress-container")
+        );
+
+    } catch (err) {
+        console.error(
+            "Не удалось получить информацию о видео:",
+            err
+        );
+    }
+}
 
 async function pollJob(jobId) {
     
@@ -1041,122 +1100,173 @@ async function pollJob(jobId) {
             }
         }
         
-        async function loadInputFiles() {
-    try {
-        const response = await fetch("/api/input-files");
-        const data = await response.json();
+        async function loadInputVideoInfo(filename, card) {
+            try {
+                const response = await fetch(
+                    `/api/video-info?filename=${encodeURIComponent(filename)}`
+                );
 
-        if (!response.ok) {
-            throw new Error(
-                data.detail || "Не удалось получить список файлов"
-            );
-        }
+                const info = await response.json();
 
-        inputFilesList.innerHTML = "";
+                if (!response.ok) {
+                    return;
+                }
 
-        for (const file of data.files) {
-            const card = document.createElement("div");
-            card.className = "input-file-card";
+                const videoInfo = document.createElement("div");
 
-            const header = document.createElement("div");
-            header.className = "input-file-header";
+                videoInfo.className = "video-info";
 
-            const info = document.createElement("div");
-            info.className = "input-file-info";
+                videoInfo.innerHTML = `
+                    <div>Разрешение: ${info.width} × ${info.height}</div>
+                    <div>Кодек: ${info.codec}</div>
+                    <div>FPS: ${formatFps(info.fps)}</div>
+                    <div>Размер: ${formatBytes(info.size)}</div>
+                    <div>Длительность: ${formatTime(Math.round(info.duration))}</div>
+                `;
 
-            const name = document.createElement("div");
-            name.className = "input-file-name";
-            name.textContent = file.name;
+                card.appendChild(videoInfo);
 
-            const size = document.createElement("div");
-            size.className = "input-file-size";
-            size.textContent = formatBytes(file.size);
-
-            info.appendChild(name);
-            info.appendChild(size);
-
-            const button = document.createElement("button");
-            button.className = "input-file-button";
-            button.textContent = "Конвертировать";
-
-            button.addEventListener("click", () => {
-                convertExistingFile(file.name);
-            });
-
-            header.appendChild(info);
-            header.appendChild(button);
-
-            card.appendChild(header);
-
-            inputFilesList.appendChild(card);
-        }
-    } catch (err) {
-        showError(err.message);
-    }
-}
-
-async function convertExistingFile(filename) {
-    convertButton.disabled = true;
-    cancelButton.disabled = false;
-
-    progressContainer.style.display = "block";
-    result.style.display = "block";
-    progress.style.width = "0%";
-    status.textContent = "Подготовка файла...";
-    result.innerHTML = "";
-
-    hideError();
-
-    const formData = new FormData();
-
-    formData.append("filename", filename);
-    formData.append("output_format", format.value);
-    formData.append("quality", quality.value);
-    formData.append("preset", preset.value);
-
-    try {
-        const response = await fetch(
-            "/api/convert-existing",
-            {
-                method: "POST",
-                body: formData
+            } catch (err) {
+                console.error(
+                    "Не удалось получить информацию о видео:",
+                    err
+                );
             }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(
-                data.detail || "Ошибка запуска конвертации"
-            );
         }
 
-        currentJobId = data.job_id;
-        currentJobIds = [data.job_id];
+        async function loadInputFiles() {
+            if (inputFilesLoading) {
+                return;
+            }
 
-        createJobCard(
-            data.job_id,
-            data.filename
-        );
+            inputFilesLoading = true;
 
-        await pollJob(data.job_id);
+            try {
+                const response = await fetch("/api/input-files");
+                const data = await response.json();
 
-        convertButton.disabled = false;
-        cancelButton.disabled = true;
-        currentJobId = null;
-        currentJobIds = [];
+                if (!response.ok) {
+                    throw new Error(
+                        data.detail || "Не удалось получить список файлов"
+                    );
+                }
 
-        await loadInputFiles();
+                const fragment = document.createDocumentFragment();
 
-    } catch (err) {
-        showError(err.message);
+                for (const file of data.files) {
+                    const card = document.createElement("div");
+                    card.className = "input-file-card";
 
-        convertButton.disabled = false;
-        cancelButton.disabled = true;
-        currentJobId = null;
-        currentJobIds = [];
-    }
-}
+                    const header = document.createElement("div");
+                    header.className = "input-file-header";
+
+                    const info = document.createElement("div");
+                    info.className = "input-file-info";
+
+                    const name = document.createElement("div");
+                    name.className = "input-file-name";
+                    name.textContent = file.name;
+
+                    const size = document.createElement("div");
+                    size.className = "input-file-size";
+                    size.textContent = formatBytes(file.size);
+
+                    info.appendChild(name);
+                    info.appendChild(size);
+
+                    const button = document.createElement("button");
+                    button.className = "input-file-button";
+                    button.textContent = "Конвертировать";
+
+                    button.addEventListener("click", () => {
+                        convertExistingFile(file.name);
+                    });
+
+                    header.appendChild(info);
+                    header.appendChild(button);
+
+                    card.appendChild(header);
+
+                    await loadInputVideoInfo(
+                        file.name,
+                        card
+                    );
+
+                    fragment.appendChild(card);
+                }
+
+                inputFilesList.replaceChildren(fragment);
+
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                inputFilesLoading = false;
+            }
+        }
+                
+
+        async function convertExistingFile(filename) {
+            convertButton.disabled = true;
+            cancelButton.disabled = false;
+
+            progressContainer.style.display = "block";
+            result.style.display = "block";
+            progress.style.width = "0%";
+            status.textContent = "Подготовка файла...";
+            result.innerHTML = "";
+
+            hideError();
+
+            const formData = new FormData();
+
+            formData.append("filename", filename);
+            formData.append("output_format", format.value);
+            formData.append("quality", quality.value);
+            formData.append("preset", preset.value);
+
+            try {
+                const response = await fetch(
+                    "/api/convert-existing",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.detail || "Ошибка запуска конвертации"
+                    );
+                }
+
+                currentJobId = data.job_id;
+                currentJobIds = [data.job_id];
+
+                createJobCard(
+                    data.job_id,
+                    data.filename
+                );
+
+                await pollJob(data.job_id);
+
+                convertButton.disabled = false;
+                cancelButton.disabled = true;
+                currentJobId = null;
+                currentJobIds = [];
+
+                await loadInputFiles();
+
+            } catch (err) {
+                showError(err.message);
+
+                convertButton.disabled = false;
+                cancelButton.disabled = true;
+                currentJobId = null;
+                currentJobIds = [];
+            }
+        }
 
         /* =========================
            Вспомогательные функции
@@ -1184,6 +1294,21 @@ async function convertExistingFile(filename) {
             }
 
             return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+        }
+
+        function formatFps(fps) {
+            if (!fps || !fps.includes("/")) {
+                return fps || "0 FPS";
+            }
+
+            const [numerator, denominator] =
+                fps.split("/").map(Number);
+
+            if (!denominator) {
+                return fps;
+            }
+
+            return `${(numerator / denominator).toFixed(2)} FPS`;
         }
 
         function formatBytes(bytes) {

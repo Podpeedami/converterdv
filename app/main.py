@@ -5,6 +5,8 @@ import uuid
 from redis import Redis
 
 from pathlib import Path
+import subprocess
+import json
 
 from celery.result import AsyncResult
 
@@ -31,6 +33,51 @@ from .tasks import (
 
 INPUT_DIR = Path("/data/input")
 OUTPUT_DIR = Path("/data/output")
+
+def get_video_info(path: Path) -> dict:
+    command = [
+        "ffprobe",
+        "-v", "error",
+        "-select_streams", "v:0",
+        "-show_entries",
+        "stream=codec_name,width,height,r_frame_rate",
+        "-show_entries",
+        "format=duration,size",
+        "-of", "json",
+        str(path),
+    ]
+
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Не удалось получить информацию о видео",
+        )
+
+    try:
+        data = json.loads(result.stdout)
+        stream = data.get("streams", [{}])[0]
+        format_data = data.get("format", {})
+
+        return {
+            "codec": stream.get("codec_name", "unknown"),
+            "width": stream.get("width", 0),
+            "height": stream.get("height", 0),
+            "fps": stream.get("r_frame_rate", "0/1"),
+            "duration": float(format_data.get("duration", 0)),
+            "size": int(float(format_data.get("size", 0))),
+        }
+    except (ValueError, TypeError, KeyError, IndexError):
+        raise HTTPException(
+            status_code=400,
+            detail="Некорректные данные видео",
+        )
 
 INPUT_DIR.mkdir(
     parents=True,
@@ -147,6 +194,22 @@ async def health():
     return {
         "status": "ok",
         "service": "video-converter",
+    }
+
+@app.get("/api/video-info")
+async def video_info(filename: str):
+    safe_name = safe_filename(filename)
+    input_file = INPUT_DIR / safe_name
+
+    if not input_file.exists() or not input_file.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Файл не найден",
+        )
+
+    return {
+        "filename": safe_name,
+        **get_video_info(input_file),
     }
 
 @app.get("/api/input-files")
