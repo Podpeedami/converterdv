@@ -11,13 +11,31 @@
     <style>
 
         .video-info {
-            margin: 10px 0 12px 0;
-            padding: 10px 12px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 6px 12px;
+
+            margin: 12px 0;
+            padding: 10px 14px;
+
+            border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 10px;
-            background: rgba(255, 255, 255, 0.05);
+
+            background: rgba(255, 255, 255, 0.035);
+
             font-size: 13px;
-            line-height: 1.6;
+            line-height: 1.4;
             color: #cfcfcf;
+        }
+
+        .video-info div {
+            min-width: 0;
+        }
+
+        @media (max-width: 500px) {
+            .video-info {
+                grid-template-columns: 1fr;
+            }
         }
 
         * {
@@ -55,7 +73,7 @@
 
             background: rgba(10, 15, 25, 0.35);
         }
-        
+
         .app-logo {
             width: 64px;
             height: 64px;
@@ -94,7 +112,7 @@
         }
 
         .drop-zone {
-            padding: 40px 20px;
+            padding: 46px 20px;
 
             border: 2px dashed #4b5563;
             border-radius: 14px;
@@ -117,7 +135,12 @@
             display: block;
 
             margin-bottom: 8px;
-            font-size: 18px;
+            font-size: 19px;
+        }
+
+        .drop-zone > span {
+            color: #9ca3af;
+            font-size: 14px;
         }
 
         .filename {
@@ -262,60 +285,81 @@
         }
 
         .input-file-card {
-            margin-top: 10px;
-            padding: 16px;
-            border: 1px solid #374151;
-            border-radius: 12px;
-            background: #111827;
+            margin-top: 16px;
+            padding: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            background: rgba(17, 24, 39, 0.72);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
         }
 
         .input-file-card:first-child {
             margin-top: 0;
         }
 
+        .input-file-card:hover {
+            border-color: rgba(255, 255, 255, 0.16);
+            background: rgba(20, 28, 44, 0.82);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+        }
+
         .input-file-header {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             justify-content: space-between;
-            gap: 15px;
+            gap: 22px;
         }
 
         .input-file-info {
             min-width: 0;
+            flex: 1;
         }
 
         .input-file-name {
-            margin-bottom: 6px;
-            word-break: break-all;
+            margin-bottom: 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 16px;
             font-weight: 600;
+            line-height: 1.4;
+            color: #f3f4f6;
+            letter-spacing: 0.1px;
+        }
+
+        .input-file-name::before {
+            content: "🎬";
+            margin-right: 9px;
+            font-size: 18px;
         }
 
         .input-file-size {
             color: #9ca3af;
             font-size: 13px;
+            line-height: 1.4;
         }
 
         .input-file-button {
             flex-shrink: 0;
             width: auto;
             margin-top: 0;
-            padding: 10px 16px;
+            padding: 11px 18px;
             white-space: nowrap;
-        }
-
-        .input-file-name {
-            margin-bottom: 6px;
-            word-break: break-all;
+            border-radius: 10px;
+            font-size: 14px;
             font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s, opacity 0.15s;
         }
 
-        .input-file-size {
-            color: #9ca3af;
-            font-size: 13px;
+        .input-file-button:hover {
+            transform: translateY(-1px);
+            opacity: 0.9;
         }
 
-        .input-file-button {
-            margin-top: 12px;
+        .input-file-button:active {
+            transform: translateY(0);
         }
 
         .job-card:first-child {
@@ -364,6 +408,79 @@
             }
 
         }
+
+        @media (max-width: 600px) {
+            .input-file-header {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .input-file-button {
+                width: 100%;
+            }
+        }
+
+        .section-divider {
+            height: 1px;
+            margin: 24px 0 18px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .input-files-title {
+            margin-bottom: 16px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #d1d5db;;
+        }
+
+        .input-files-title::before {
+            content: "📁";
+            margin-right: 8px;
+            font-size: 16px;
+        }
+
+        #cancelButton:disabled {
+            background: #374151 !important;
+            color: #9ca3af;
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        #convertButton:disabled {
+            background: #374151 !important;
+            color: #9ca3af;
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .drop-hint {
+            display: block;
+            margin-top: 10px;
+            color: #818cf8;
+            font-size: 12px;
+            transition: opacity 0.2s;
+        }
+
+        .drop-zone:hover .drop-hint {
+            opacity: 0.9;
+        }
+
+        .drop-icon {
+            margin-bottom: 10px;
+            font-size: 28px;
+            line-height: 1;
+            transition: transform 0.2s;
+        }
+
+        .drop-zone:hover .drop-icon {
+            transform: scale(1.08);
+        }
+
+        .drop-zone.dragover .drop-icon {
+            transform: scale(1.12);
+        }
+
     </style>
 
 </head>
@@ -380,6 +497,8 @@
 
             <div class="drop-zone" id="dropZone">
 
+                <div class="drop-icon">🎬</div>
+
                 <strong>
                     Перетащите видео сюда
                 </strong>
@@ -387,6 +506,10 @@
                 <span>
                     или нажмите для выбора файла
                 </span>
+
+                <small class="drop-hint">
+                    Можно выбрать несколько видео одновременно
+                </small>
 
                 <div class="filename" id="filename"></div>
 
@@ -511,16 +634,18 @@
 
             </div>
 
-            <div class="result" id="result">
+            <div class="result" id="result" style="display: none;">
             </div>
 
             <div class="error" id="error"></div>
 
             <div class="input-files" id="inputFiles">
+                <div class="section-divider"></div>
+
                 <div class="input-files-title">
-                    Файлы в папке input
+                    Видео в папке input
                 </div>
-            
+
                 <div id="inputFilesList"></div>
             </div>
 
