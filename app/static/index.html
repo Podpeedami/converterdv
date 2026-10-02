@@ -47,9 +47,15 @@
             display: flex;
             align-items: center;
             gap: 16px;
-            margin-bottom: 24px;
-        }
 
+            margin: -32px -32px 28px -32px;
+            padding: 18px 24px;
+
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+            background: rgba(10, 15, 25, 0.35);
+        }
+        
         .app-logo {
             width: 64px;
             height: 64px;
@@ -363,19 +369,13 @@
 </head>
 
 <body>
-    <div class="app-header">
-        <img src="/static/logo.png" alt="ConverterKDV" class="app-logo">
-        <h1>ConverterKDV</h1>
-    </div>
+
     <div class="container">
         <div class="card">
 
-            <h1>
-                🎬 Video Converter
-            </h1>
-
-            <div class="subtitle">
-                Перекодировка видео через FFmpeg
+            <div class="app-header">
+                <img src="/static/logo.png" alt="ConverterKDV" class="app-logo">
+                <h1>ConverterKDV</h1>
             </div>
 
             <div class="drop-zone" id="dropZone">
