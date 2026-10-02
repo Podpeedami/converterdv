@@ -125,7 +125,7 @@ MAX_UPLOAD_SIZE = parse_size(
 
 app = FastAPI(
     title="Video Converter API",
-    version="3.0.1",
+    version="3.0.2",
 )
 
 
