@@ -544,6 +544,10 @@
                         <option value="720p_hevc">
                             720p — HEVC / H.265
                         </option>
+ 
+                        <option value="480p_hevc">
+                            480p — HEVC / H.265 (MKV)
+                        </option>
 
                     </select>
 
@@ -692,6 +696,13 @@
             document.getElementById("error");
         
         
+        // Для пресета 480p HEVC автоматически выбираем контейнер MKV.
+        preset.addEventListener("change", () => {
+            if (preset.value === "480p_hevc") {
+                format.value = "mkv";
+            }
+        });
+
         let selectedFiles = [];
         
         let currentJobId = null;

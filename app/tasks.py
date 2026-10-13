@@ -58,6 +58,11 @@ ALLOWED_PRESETS = {
         "height": 720,
         "video_codec": "libx265",
     },
+    "480p_hevc": {
+        "width": 854,
+        "height": 480,
+        "video_codec": "libx265",
+    },
 }
 
 
