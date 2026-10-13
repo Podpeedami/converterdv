@@ -37,7 +37,7 @@ ALLOWED_FORMATS = {
     "mkv": {
         "extension": "mkv",
         "video_codec": "libx264",
-        "audio_codec": "aac",
+        "audio_codec": "ac3",
     },
 }
 
