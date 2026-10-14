@@ -1109,6 +1109,7 @@ async function loadVideoInfo(filename, jobId) {
 }
 
 async function pollJob(jobId) {
+    let displayedPercent = 0;
     
     const progressElement =
         document.querySelector(
@@ -1151,8 +1152,12 @@ async function pollJob(jobId) {
                 }
         
         
-                const percent =
-                    job.progress || 0;
+                const apiPercent = Math.max(0, Math.min(100, Number(job.progress) || 0));
+                displayedPercent = Math.min(
+                    apiPercent,
+                    displayedPercent + 1
+                );
+                const percent = displayedPercent;
         
         
                 progressElement.style.width =
